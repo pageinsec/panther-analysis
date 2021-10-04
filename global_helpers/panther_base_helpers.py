@@ -207,7 +207,7 @@ def okta_alert_context(event: dict):
     }
 
 
-def deep_get(dictionary: dict, *keys, default=None):
+def deep_get_legacy(dictionary: dict, *keys, default=None):
     """Safely return the value of an arbitrarily nested map
 
     Inspired by https://bit.ly/3a0hq9E
@@ -215,6 +215,35 @@ def deep_get(dictionary: dict, *keys, default=None):
     return reduce(
         lambda d, key: d.get(key, default) if isinstance(d, Mapping) else default, keys, dictionary
     )
+
+
+# Used to identify whether a key exists in a mapping
+DEEP_GET_SENTINEL_VALUE = object()
+
+
+def deep_get(dictionary: dict, *keys, default=None):
+    """Safely return the value of an arbitrarily nested map.
+
+    If the object passed as parameter is not a Mapping instance,
+    TypeError is raised.
+    """
+    value = default
+    element = dictionary
+    for key in keys:
+        if not isinstance(element, Mapping):
+            # If the initial object is not a Mapping, raise an error
+            if element is dictionary:
+                raise TypeError(
+                    f"Mapping type required and received <{dictionary.__class__.__name__}>"
+                )
+            # Otherwise return the default
+            return default
+        element = element.get(key, DEEP_GET_SENTINEL_VALUE)
+        # If the sentinel value is returned, they key does not exist in the mapping
+        if element is DEEP_GET_SENTINEL_VALUE:
+            return default
+        value = element
+    return value
 
 
 def aws_strip_role_session_id(user_identity_arn):
